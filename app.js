@@ -16,6 +16,7 @@ const gradesInput = document.getElementById('gradesInput');
 const gradesStatus = document.getElementById('gradesStatus');
 const gradesPanel = document.getElementById('gradesPanel');
 const presentation = document.getElementById('presentation');
+const studentInfo = document.querySelector('.studentInfo');
 const ROOT_PHOTOS_DIR = 'alunos';
 const IMAGE_EXTENSIONS = ['jpeg', 'jpg', 'png', 'webp'];
 let filtered = [...students];
@@ -224,10 +225,20 @@ function loadGradesWorkbook(workbook) {
 function renderGrades(student) {
   if (!gradesPanel) return;
   const grades = gradesByStudent.get(studentKey(student.nome, student.turma)) || [];
+  gradesPanel.classList.remove('compact', 'veryCompact');
+  studentInfo?.classList.remove('hasGrades', 'hasManyGrades', 'hasVeryManyGrades');
   if (!grades.length) {
     gradesPanel.innerHTML = '';
     return;
   }
+  const longestDisciplineName = Math.max(...grades.map(({ disciplina }) => String(disciplina || '').length));
+  const shouldCompact = grades.length >= 8 || longestDisciplineName >= 24;
+  const shouldVeryCompact = grades.length >= 13 || longestDisciplineName >= 36;
+  gradesPanel.classList.toggle('compact', shouldCompact);
+  gradesPanel.classList.toggle('veryCompact', shouldVeryCompact);
+  studentInfo?.classList.add('hasGrades');
+  studentInfo?.classList.toggle('hasManyGrades', shouldCompact);
+  studentInfo?.classList.toggle('hasVeryManyGrades', shouldVeryCompact);
   gradesPanel.innerHTML = grades.map(({ disciplina, nota, missing }) => `
     <div class="gradeBadge ${missing ? 'missing' : (nota <= 4 ? 'danger' : 'warning')}">
       <strong>${escapeHtml(disciplina)}</strong>

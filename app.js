@@ -27,6 +27,9 @@ function normalize(text) {
     .toUpperCase().replace(/[^A-Z0-9 ]+/g, ' ')
     .split(/\s+/).filter(w => w && !['DE','DA','DO','DAS','DOS','E'].includes(w)).join(' ');
 }
+function hasReviewTag(text) {
+  return normalize(text).split(' ').includes('REVISAR');
+}
 function fileBase(name) {
   return String(name || '').replace(/\.[^.]+$/, '');
 }
@@ -40,6 +43,7 @@ function encodeRelativePath(path) {
   return String(path || '').split(/[\\/]+/).filter(Boolean).map(encodeURIComponent).join('/');
 }
 function registerPhoto(name, relativePath, url) {
+  if (hasReviewTag(name) || hasReviewTag(relativePath)) return;
   const pathKey = normalizePath(relativePath);
   const existing = photosByPath.get(pathKey);
   if (existing) {
@@ -47,6 +51,8 @@ function registerPhoto(name, relativePath, url) {
     photoRecords = photoRecords.filter(record => record !== existing);
   }
   const record = {
+    name,
+    relativePath,
     nameKey: normalize(fileBase(name)),
     pathKey,
     url,
@@ -71,18 +77,48 @@ function photoFolderName(path) {
 function pathHasTurma(pathKey, turma) {
   return pathKey.split('/').includes(normalize(turma));
 }
+function normalizedWords(text) {
+  return normalize(text).split(' ').filter(Boolean);
+}
+function wordsNearlyEqual(a, b) {
+  if (a === b) return true;
+  if (Math.min(a.length, b.length) < 5 || Math.abs(a.length - b.length) > 1) return false;
+  let edits = 0;
+  let i = 0;
+  let j = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) {
+      i++;
+      j++;
+    } else {
+      edits++;
+      if (edits > 1) return false;
+      if (a.length > b.length) i++;
+      else if (b.length > a.length) j++;
+      else {
+        i++;
+        j++;
+      }
+    }
+  }
+  return edits + (a.length - i) + (b.length - j) <= 1;
+}
 function similarity(a, b) {
-  a = normalize(a); b = normalize(b);
-  if (!a || !b) return 0;
-  const aw = new Set(a.split(' '));
-  const bw = new Set(b.split(' '));
-  let inter = 0; bw.forEach(w => { if (aw.has(w)) inter++; });
-  const overlap = bw.size ? inter / bw.size : 0;
-  let longer = a.length > b.length ? a : b;
-  let shorter = a.length > b.length ? b : a;
-  let same = 0;
-  for (const ch of shorter) if (longer.includes(ch)) same++;
-  return Math.max(overlap, same / Math.max(longer.length, 1));
+  const aw = normalizedWords(a);
+  const bw = normalizedWords(b);
+  if (!aw.length || !bw.length) return 0;
+  const used = new Set();
+  let inter = 0;
+  for (const word of bw) {
+    const index = aw.findIndex((candidate, i) => !used.has(i) && wordsNearlyEqual(candidate, word));
+    if (index >= 0) {
+      used.add(index);
+      inter++;
+    }
+  }
+  const coverage = inter / Math.max(aw.length, bw.length);
+  const containment = inter / Math.min(aw.length, bw.length);
+  return containment === 1 && Math.min(aw.length, bw.length) >= 2 ? containment : coverage;
 }
 function populateTurmas() {
   const turmas = [...new Set(students.map(s => s.turma))];
@@ -106,8 +142,9 @@ function renderList() {
   document.querySelectorAll('.studentItem').forEach(btn => btn.onclick = () => showStudent(Number(btn.dataset.index)));
 }
 function studentPhotoCandidates(student) {
-  const expected = student.fotoArquivo || student.nome;
-  const expectedPath = normalizePath(student.fotoCaminhoRar || `${student.turma}/${expected}`);
+  const expected = hasReviewTag(student.fotoArquivo) ? student.nome : (student.fotoArquivo || student.nome);
+  const expectedPathSource = hasReviewTag(student.fotoCaminhoRar) ? `${student.turma}/${student.nome}` : (student.fotoCaminhoRar || `${student.turma}/${expected}`);
+  const expectedPath = normalizePath(expectedPathSource);
   const expectedName = normalize(fileBase(expected));
   const matchingNameCount = photoRecords.filter(record => record.nameKey === expectedName).length;
   const candidates = [];
@@ -137,7 +174,7 @@ function assignPhotos() {
   for (const student of students) {
     const record = studentPhotoCandidates(student).find(candidate => !usedPhotos.has(candidate.url));
     if (!record) continue;
-    photoAssignments.set(student.id, record.url);
+    photoAssignments.set(student.id, record);
     usedPhotos.add(record.url);
   }
 }
@@ -146,12 +183,12 @@ function findPhoto(student) {
 }
 function rootPhotoCandidates(student) {
   const candidates = new Set();
-  const expected = student.fotoArquivo || '';
+  const expected = hasReviewTag(student.fotoArquivo) ? '' : (student.fotoArquivo || '');
 
   if (expected) {
     candidates.add(`${ROOT_PHOTOS_DIR}/${student.turma}/${expected}`);
 
-    if (student.fotoCaminhoRar) {
+    if (student.fotoCaminhoRar && !hasReviewTag(student.fotoCaminhoRar)) {
       const parts = String(student.fotoCaminhoRar).split(/[\\/]+/).filter(Boolean);
       candidates.add(`${ROOT_PHOTOS_DIR}/${parts.join('/')}`);
     }
@@ -207,13 +244,13 @@ function showStudent(index) {
   serieBadge.textContent = s.serie;
   studentName.textContent = s.nome;
   studentClass.textContent = `Turma ${s.turma}`;
-  const photo = findPhoto(s);
-  if (photo) {
+  const photoRecord = findPhoto(s);
+  if (photoRecord) {
     photoFrame.style.display = 'flex';
-    studentPhoto.src = photo;
+    studentPhoto.src = photoRecord.url;
     studentPhoto.style.display = 'block';
     noPhoto.style.display = 'none';
-    matchInfo.textContent = s.fotoArquivo ? `Possível foto no RAR: ${s.fotoArquivo} • confiança ${Math.round((s.fotoScore || 0) * 100)}%` : '';
+    matchInfo.textContent = `Foto associada: ${photoRecord.relativePath} • confiança ${Math.round((s.fotoScore || 0) * 100)}%`;
   } else {
     photoFrame.style.display = 'none';
     studentPhoto.removeAttribute('src');

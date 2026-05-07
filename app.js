@@ -11,6 +11,9 @@ const serieBadge = document.getElementById('serieBadge');
 const studentName = document.getElementById('studentName');
 const studentClass = document.getElementById('studentClass');
 const matchInfo = document.getElementById('matchInfo');
+const gradesInput = document.getElementById('gradesInput');
+const gradesStatus = document.getElementById('gradesStatus');
+const gradesPanel = document.getElementById('gradesPanel');
 const presentation = document.getElementById('presentation');
 const ROOT_PHOTOS_DIR = 'alunos';
 const IMAGE_EXTENSIONS = ['jpeg', 'jpg', 'png', 'webp'];
@@ -20,6 +23,7 @@ let photoRecords = [];
 let photosByPath = new Map();
 let loadedFolders = new Set();
 let photoAssignments = new Map();
+let gradesByStudent = new Map();
 
 function normalize(text) {
   return String(text || '')
@@ -41,6 +45,30 @@ function normalizePath(path) {
 }
 function encodeRelativePath(path) {
   return String(path || '').split(/[\\/]+/).filter(Boolean).map(encodeURIComponent).join('/');
+}
+function studentKey(name, turma) {
+  return `${normalize(turma)}|${normalize(name)}`;
+}
+function parseGrade(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(String(value).replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function formatGrade(value) {
+  if (value === null) return 'Sem nota';
+  return Number.isInteger(value) ? String(value) : String(value).replace('.', ',');
+}
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+function cellValue(row, index) {
+  return Array.isArray(row) ? row[index] : '';
 }
 function registerPhoto(name, relativePath, url) {
   if (hasReviewTag(name) || hasReviewTag(relativePath)) return;
@@ -141,6 +169,65 @@ function renderList() {
   `).join('');
   document.querySelectorAll('.studentItem').forEach(btn => btn.onclick = () => showStudent(Number(btn.dataset.index)));
 }
+function findHeaderRow(rows) {
+  return rows.findIndex(row => normalize(cellValue(row, 0)).includes('NOME ALUNO'));
+}
+function gradesFromRow(row, disciplines) {
+  return disciplines
+    .map((discipline, index) => {
+      const rawGrade = cellValue(row, index + 2);
+      const nota = parseGrade(rawGrade);
+      const missing = rawGrade === null || rawGrade === undefined || rawGrade === '';
+      return { disciplina: discipline, nota, missing };
+    })
+    .filter(item => item.disciplina && (item.missing || (item.nota !== null && item.nota >= 0 && item.nota <= 6)));
+}
+function loadGradesWorkbook(workbook) {
+  if (!workbook || !Array.isArray(workbook.SheetNames)) {
+    throw new Error('arquivo sem abas reconhecidas');
+  }
+  const nextGrades = new Map();
+  let totalStudents = 0;
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) continue;
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
+    if (!Array.isArray(rows) || !rows.length) continue;
+    const headerIndex = findHeaderRow(rows);
+    if (headerIndex < 0) continue;
+    const turma = sheetName.trim();
+    const header = rows[headerIndex];
+    const disciplines = (Array.isArray(header) ? header : []).slice(2).map(value => String(value || '').trim());
+
+    for (const row of rows.slice(headerIndex + 1)) {
+      const name = String(cellValue(row, 0) || '').trim();
+      if (!name || normalize(name).includes('NOME ALUNO')) continue;
+      const grades = gradesFromRow(row, disciplines);
+      nextGrades.set(studentKey(name, turma), grades);
+      totalStudents++;
+    }
+  }
+  if (!totalStudents) {
+    throw new Error('nenhum aluno encontrado nas abas da planilha');
+  }
+  gradesByStudent = nextGrades;
+  gradesStatus.textContent = `${totalStudents} aluno(s) com notas carregadas`;
+  showStudent(currentIndex);
+}
+function renderGrades(student) {
+  if (!gradesPanel) return;
+  const grades = gradesByStudent.get(studentKey(student.nome, student.turma)) || [];
+  if (!grades.length) {
+    gradesPanel.innerHTML = '';
+    return;
+  }
+  gradesPanel.innerHTML = grades.map(({ disciplina, nota, missing }) => `
+    <div class="gradeBadge ${missing ? 'missing' : (nota <= 4 ? 'danger' : 'warning')}">
+      <strong>${escapeHtml(disciplina)}</strong>
+      <span>${escapeHtml(formatGrade(missing ? null : nota))}</span>
+    </div>
+  `).join('');
+}
 function studentPhotoCandidates(student) {
   const expected = hasReviewTag(student.fotoArquivo) ? student.nome : (student.fotoArquivo || student.nome);
   const expectedPathSource = hasReviewTag(student.fotoCaminhoRar) ? `${student.turma}/${student.nome}` : (student.fotoCaminhoRar || `${student.turma}/${expected}`);
@@ -150,7 +237,7 @@ function studentPhotoCandidates(student) {
   const candidates = [];
 
   for (const [path, record] of photosByPath.entries()) {
-    if (path === expectedPath || path.endsWith(`/${expectedPath}`)) {
+    if (pathHasTurma(record.pathKey, student.turma) && (path === expectedPath || path.endsWith(`/${expectedPath}`))) {
       candidates.push({ record, score: 3 });
     }
   }
@@ -158,7 +245,7 @@ function studentPhotoCandidates(student) {
   for (const record of photoRecords) {
     if (record.nameKey === expectedName && pathHasTurma(record.pathKey, student.turma)) {
       candidates.push({ record, score: 2.5 });
-    } else if (record.nameKey === expectedName && matchingNameCount === 1) {
+    } else if (record.nameKey === expectedName && matchingNameCount === 1 && pathHasTurma(record.pathKey, student.turma)) {
       candidates.push({ record, score: 2 });
     } else if (pathHasTurma(record.pathKey, student.turma)) {
       const score = Math.max(similarity(student.nome, record.nameKey), similarity(expectedName, record.nameKey));
@@ -188,7 +275,7 @@ function rootPhotoCandidates(student) {
   if (expected) {
     candidates.add(`${ROOT_PHOTOS_DIR}/${student.turma}/${expected}`);
 
-    if (student.fotoCaminhoRar && !hasReviewTag(student.fotoCaminhoRar)) {
+    if (student.fotoCaminhoRar && !hasReviewTag(student.fotoCaminhoRar) && pathHasTurma(normalizePath(student.fotoCaminhoRar), student.turma)) {
       const parts = String(student.fotoCaminhoRar).split(/[\\/]+/).filter(Boolean);
       candidates.add(`${ROOT_PHOTOS_DIR}/${parts.join('/')}`);
     }
@@ -237,6 +324,7 @@ function showStudent(index) {
     studentPhoto.style.display = 'none';
     noPhoto.style.display = 'none';
     matchInfo.textContent = '';
+    renderGrades({ nome: '', turma: '' });
     return;
   }
   currentIndex = (index + filtered.length) % filtered.length;
@@ -258,6 +346,7 @@ function showStudent(index) {
     noPhoto.style.display = 'none';
     matchInfo.textContent = '';
   }
+  renderGrades(s);
   renderList();
 }
 document.getElementById('photoInput').addEventListener('change', (event) => {
@@ -270,6 +359,26 @@ document.getElementById('photoInput').addEventListener('change', (event) => {
   assignPhotos();
   updatePhotoStatus();
   showStudent(currentIndex);
+});
+gradesInput.addEventListener('change', async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!window.XLSX || !XLSX.read || !XLSX.utils?.sheet_to_json) {
+    gradesStatus.textContent = 'Leitor de planilha não carregado';
+    event.target.value = '';
+    return;
+  }
+  gradesStatus.textContent = 'Carregando notas...';
+  try {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: 'array', cellDates: false });
+    loadGradesWorkbook(workbook);
+  } catch (error) {
+    console.error(error);
+    gradesStatus.textContent = `Erro ao ler: ${error.message || 'planilha inválida'}`;
+  } finally {
+    event.target.value = '';
+  }
 });
 document.getElementById('btnNext').onclick = () => showStudent(currentIndex + 1);
 document.getElementById('btnPrev').onclick = () => showStudent(currentIndex - 1);

@@ -34,6 +34,11 @@
       <input id="photoInput" type="file" accept="image/*" multiple webkitdirectory directory />
       <span id="photoStatus">Buscando fotos em alunos/ ou selecione uma pasta</span>
     </label>
+    <label class="fileLabel">
+      Carregar planilha de notas
+      <input id="gradesInput" type="file" accept=".xlsx,.xls" />
+      <span id="gradesStatus">Nenhuma planilha carregada</span>
+    </label>
   </section>
 
   <main class="stage">
@@ -55,6 +60,7 @@
         <h2 id="studentName"></h2>
         <p id="studentClass"></p>
         <small id="matchInfo"></small>
+        <div id="gradesPanel" class="gradesPanel"></div>
       </div>
     </section>
   </main>
@@ -64,6 +70,7 @@
   </footer>
 
   <script src="students.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

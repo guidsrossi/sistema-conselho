@@ -10,6 +10,7 @@ const noPhoto = document.getElementById('noPhoto');
 const serieBadge = document.getElementById('serieBadge');
 const studentName = document.getElementById('studentName');
 const studentClass = document.getElementById('studentClass');
+const studentTutor = document.getElementById('studentTutor');
 const matchInfo = document.getElementById('matchInfo');
 const gradesInput = document.getElementById('gradesInput');
 const gradesStatus = document.getElementById('gradesStatus');
@@ -49,6 +50,7 @@ function encodeRelativePath(path) {
 function studentKey(name, turma) {
   return `${normalize(turma)}|${normalize(name)}`;
 }
+const studentsByKey = new Map(students.map(student => [studentKey(student.nome, student.turma), student]));
 function parseGrade(value) {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(String(value).replace(',', '.'));
@@ -164,7 +166,7 @@ function renderList() {
   countInfo.textContent = `${filtered.length} aluno(s)`;
   studentList.innerHTML = filtered.map((s, i) => `
     <button class="studentItem ${i === currentIndex ? 'active' : ''}" data-index="${i}">
-      ${s.nome}<small>${s.serie} • Turma ${s.turma}</small>
+      ${escapeHtml(s.nome)}<small>${escapeHtml(s.serie)} • Turma ${escapeHtml(s.turma)}</small>${s.tutor ? `<small>Tutor(a): ${escapeHtml(s.tutor)}</small>` : ''}
     </button>
   `).join('');
   document.querySelectorAll('.studentItem').forEach(btn => btn.onclick = () => showStudent(Number(btn.dataset.index)));
@@ -202,8 +204,13 @@ function loadGradesWorkbook(workbook) {
     for (const row of rows.slice(headerIndex + 1)) {
       const name = String(cellValue(row, 0) || '').trim();
       if (!name || normalize(name).includes('NOME ALUNO')) continue;
+      const key = studentKey(name, turma);
+      const tutor = String(cellValue(row, 1) || '').trim();
+      if (tutor && studentsByKey.has(key)) {
+        studentsByKey.get(key).tutor = tutor;
+      }
       const grades = gradesFromRow(row, disciplines);
-      nextGrades.set(studentKey(name, turma), grades);
+      nextGrades.set(key, grades);
       totalStudents++;
     }
   }
@@ -319,6 +326,7 @@ function showStudent(index) {
   if (!filtered.length) {
     studentName.textContent = 'Nenhum aluno encontrado';
     studentClass.textContent = '';
+    studentTutor.textContent = '';
     serieBadge.textContent = '';
     photoFrame.style.display = 'none';
     studentPhoto.style.display = 'none';
@@ -332,6 +340,7 @@ function showStudent(index) {
   serieBadge.textContent = s.serie;
   studentName.textContent = s.nome;
   studentClass.textContent = `Turma ${s.turma}`;
+  studentTutor.textContent = s.tutor ? `Tutor(a): ${s.tutor}` : '';
   const photoRecord = findPhoto(s);
   if (photoRecord) {
     photoFrame.style.display = 'flex';

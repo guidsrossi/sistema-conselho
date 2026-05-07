@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apresentação de Estudantes</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Apresentação de Estudantes</h1>
+      <p>Exiba nome, série, turma e foto dos estudantes.</p>
+    </div>
+    <div class="actions">
+      <button id="btnFullscreen">Tela cheia</button>
+      <button id="btnRandom">Aleatório</button>
+      <button id="btnPrev">◀ Anterior</button>
+      <button id="btnNext">Próximo ▶</button>
+    </div>
+  </header>
+
+  <section class="controls">
+    <label>
+      Turma
+      <select id="turmaSelect"></select>
+    </label>
+    <label>
+      Buscar aluno
+      <input id="searchInput" type="text" placeholder="Digite o nome..." />
+    </label>
+    <label class="fileLabel">
+      Carregar fotos extras
+      <input id="photoInput" type="file" accept="image/*" multiple webkitdirectory directory />
+      <span id="photoStatus">Buscando fotos em alunos/ ou selecione uma pasta</span>
+    </label>
+  </section>
+
+  <main class="stage">
+    <aside class="listPanel">
+      <div class="listHeader">
+        <strong>Alunos</strong>
+        <span id="countInfo"></span>
+      </div>
+      <div id="studentList" class="studentList"></div>
+    </aside>
+
+    <section class="presentation" id="presentation">
+      <div class="photoFrame" id="photoFrame">
+        <img id="studentPhoto" alt="Foto do estudante" />
+        <div id="noPhoto" class="noPhoto">Sem foto</div>
+      </div>
+      <div class="studentInfo">
+        <span id="serieBadge" class="badge"></span>
+        <h2 id="studentName"></h2>
+        <p id="studentClass"></p>
+        <small id="matchInfo"></small>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Dica: use as setas do teclado para avançar/voltar. Pressione F para tela cheia.
+  </footer>
+
+  <script src="students.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

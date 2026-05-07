@@ -1,0 +1,57 @@
+:root {
+  --bg1: #07111f;
+  --bg2: #12385b;
+  --card: rgba(255,255,255,.1);
+  --card2: rgba(255,255,255,.16);
+  --text: #ffffff;
+  --muted: #cbd5e1;
+  --accent: #38bdf8;
+  --accent2: #22c55e;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top left, #1d4ed8 0, transparent 28%), linear-gradient(135deg, var(--bg1), var(--bg2));
+}
+.topbar { display:flex; justify-content:space-between; gap:16px; align-items:center; padding:22px 32px; }
+.topbar h1 { margin:0; font-size:30px; }
+.topbar p { margin:6px 0 0; color: var(--muted); }
+.actions, .controls { display:flex; flex-wrap:wrap; gap:10px; align-items:end; }
+button, select, input { border:0; border-radius:14px; padding:12px 14px; font-size:15px; outline:none; }
+button { cursor:pointer; color:#06131f; font-weight:700; background:linear-gradient(135deg, var(--accent), #93c5fd); }
+button:hover { transform: translateY(-1px); }
+.controls { margin:0 32px 18px; padding:16px; background:var(--card); border:1px solid rgba(255,255,255,.16); border-radius:20px; backdrop-filter: blur(8px); }
+.controls label { display:flex; flex-direction:column; gap:6px; color:var(--muted); font-weight:700; }
+.controls input, .controls select { min-width:220px; background:#fff; color:#0f172a; }
+.fileLabel input { display:none; }
+.fileLabel span { display:inline-block; min-width:260px; border-radius:14px; padding:12px 14px; background:#ffffff; color:#0f172a; font-weight:400; }
+.stage { display:grid; grid-template-columns: 320px 1fr; gap:20px; padding:0 32px 20px; }
+.listPanel { height:calc(100vh - 205px); min-height:480px; overflow:hidden; background:var(--card); border:1px solid rgba(255,255,255,.16); border-radius:24px; }
+.listHeader { display:flex; justify-content:space-between; padding:16px; background:rgba(255,255,255,.08); }
+.studentList { height:calc(100% - 54px); overflow:auto; padding:10px; }
+.studentItem { width:100%; text-align:left; margin-bottom:8px; background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.08); }
+.studentItem.active { background:linear-gradient(135deg, rgba(56,189,248,.9), rgba(34,197,94,.8)); color:#06131f; }
+.studentItem small { display:block; opacity:.8; margin-top:4px; }
+.presentation { min-height:480px; height:calc(100vh - 205px); display:grid; grid-template-columns: minmax(320px, 48%) 1fr; align-items:center; gap:34px; padding:34px; border-radius:28px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); box-shadow:0 22px 70px rgba(0,0,0,.25); }
+.photoFrame { position:relative; width:100%; aspect-ratio: 4/5; max-height:calc(100vh - 280px); border-radius:28px; overflow:hidden; background:linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.04)); border:1px solid rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; }
+.photoFrame img { width:100%; height:100%; object-fit:contain; object-position:center; display:none; }
+.noPhoto { font-size:42px; font-weight:800; color:rgba(255,255,255,.72); text-transform:uppercase; letter-spacing:1px; }
+.studentInfo .badge { display:inline-block; padding:10px 16px; border-radius:999px; background:rgba(34,197,94,.95); color:#052e16; font-weight:900; }
+.studentInfo h2 { font-size: clamp(38px, 5vw, 78px); line-height:1.02; margin:24px 0 16px; }
+.studentInfo p { font-size: clamp(24px, 2.8vw, 42px); color:#dbeafe; margin:0; font-weight:800; }
+.studentInfo small { display:block; margin-top:22px; color:var(--muted); font-size:14px; }
+footer { padding:0 32px 22px; color:var(--muted); }
+.presentation:fullscreen { height:100vh; grid-template-columns: minmax(360px, 48%) 1fr; border-radius:0; padding:52px; background:linear-gradient(135deg, var(--bg1), var(--bg2)); }
+.presentation:fullscreen .studentInfo h2 { font-size: clamp(54px, 6vw, 110px); }
+.presentation:fullscreen .studentInfo p { font-size: clamp(34px, 3vw, 58px); }
+@media (max-width: 900px) {
+  .topbar, .stage { grid-template-columns:1fr; display:block; }
+  .topbar { padding:18px; }
+  .controls, .stage { margin:0 18px 16px; padding:14px; }
+  .stage { padding:0 18px 20px; }
+  .listPanel { height:260px; min-height:260px; margin-bottom:18px; }
+  .presentation { height:auto; grid-template-columns:1fr; padding:22px; }
+}

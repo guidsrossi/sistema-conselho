@@ -1,78 +1,46 @@
-const students = window.STUDENTS || [];
+const API_URL = 'https://script.google.com/macros/s/AKfycbx3DZ9kDhDmloLqQwCOV7SSsKxGrpF3uwntwRwHtTHldP8XN2FAPZwQKc1ftY28IqXA/exec';
+
 const turmaSelect = document.getElementById('turmaSelect');
 const searchInput = document.getElementById('searchInput');
 const studentList = document.getElementById('studentList');
 const countInfo = document.getElementById('countInfo');
 const studentPhoto = document.getElementById('studentPhoto');
 const photoFrame = document.getElementById('photoFrame');
-const photoStatus = document.getElementById('photoStatus');
 const noPhoto = document.getElementById('noPhoto');
 const serieBadge = document.getElementById('serieBadge');
 const studentName = document.getElementById('studentName');
 const studentClass = document.getElementById('studentClass');
 const studentTutor = document.getElementById('studentTutor');
+const studentFrequency = document.getElementById('studentFrequency');
 const matchInfo = document.getElementById('matchInfo');
-const gradesInput = document.getElementById('gradesInput');
-const gradesStatus = document.getElementById('gradesStatus');
 const gradesPanel = document.getElementById('gradesPanel');
 const presentation = document.getElementById('presentation');
 const studentInfo = document.querySelector('.studentInfo');
-const studentFrequency = document.getElementById('studentFrequency');
-const ROOT_PHOTOS_DIR = 'alunos';
-const IMAGE_EXTENSIONS = ['jpeg', 'jpg', 'png', 'webp'];
-let filtered = [...students];
+const apiStatus = document.getElementById('apiStatus');
+const btnReloadApi = document.getElementById('btnReloadApi');
+const loadingOverlay = document.getElementById('loadingOverlay');
+
+let students = [];
+let filtered = [];
 let currentIndex = 0;
-let photoRecords = [];
-let photosByPath = new Map();
-let loadedFolders = new Set();
-let photoAssignments = new Map();
 let gradesByStudent = new Map();
 let frequencyByStudent = new Map();
 
 function normalize(text) {
   return String(text || '')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase().replace(/[^A-Z0-9 ]+/g, ' ')
-    .split(/\s+/).filter(w => w && !['DE','DA','DO','DAS','DOS','E'].includes(w)).join(' ');
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9 ]+/g, ' ')
+    .split(/\s+/)
+    .filter(word => word && !['DE', 'DA', 'DO', 'DAS', 'DOS', 'E'].includes(word))
+    .join(' ');
 }
-function hasReviewTag(text) {
-  return normalize(text).split(' ').includes('REVISAR');
-}
-function fileBase(name) {
-  return String(name || '').replace(/\.[^.]+$/, '');
-}
-function normalizePath(path) {
-  const parts = String(path || '').split(/[\\/]+/).filter(Boolean);
-  if (!parts.length) return '';
-  parts[parts.length - 1] = fileBase(parts[parts.length - 1]);
-  return parts.map(normalize).filter(Boolean).join('/');
-}
-function encodeRelativePath(path) {
-  return String(path || '').split(/[\\/]+/).filter(Boolean).map(encodeURIComponent).join('/');
-}
+
 function studentKey(name, turma) {
   return `${normalize(turma)}|${normalize(name)}`;
 }
-const studentsByKey = new Map(students.map(student => [studentKey(student.nome, student.turma), student]));
-function parseGrade(value) {
-  if (value === null || value === undefined || value === '') return null;
-  const parsed = Number(String(value).replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : null;
-}
-function formatGrade(value) {
-  if (value === null) return 'Sem nota';
-  return Number.isInteger(value) ? String(value) : String(value).replace('.', ',');
-}
-function parseFrequency(value) {
-  if (value === null || value === undefined || value === '') return null;
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const parsed = Number(raw.replace('%', '').replace(',', '.'));
-  if (!Number.isFinite(parsed)) return { text: raw, value: null };
-  const percent = raw.includes('%') || parsed > 1 ? parsed : parsed * 100;
-  const formatted = Number.isInteger(percent) ? String(percent) : percent.toFixed(1).replace('.', ',');
-  return { text: `${formatted}%`, value: percent };
-}
+
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({
     '&': '&amp;',
@@ -82,383 +50,330 @@ function escapeHtml(value) {
     "'": '&#39;'
   }[char]));
 }
-function cellValue(row, index) {
-  return Array.isArray(row) ? row[index] : '';
+
+function parseGrade(value) {
+  if (value === null || value === undefined || value === '') return null;
+  if (value === '-') return null;
+
+  const parsed = Number(String(value).replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
 }
-function registerPhoto(name, relativePath, url) {
-  if (hasReviewTag(name) || hasReviewTag(relativePath)) return;
-  const pathKey = normalizePath(relativePath);
-  const existing = photosByPath.get(pathKey);
-  if (existing) {
-    if (existing.objectUrl) URL.revokeObjectURL(existing.url);
-    photoRecords = photoRecords.filter(record => record !== existing);
+
+function formatGrade(value) {
+  if (value === null || value === undefined) return 'Sem nota';
+  return Number.isInteger(value) ? String(value) : String(value).replace('.', ',');
+}
+
+function parseFrequency(value) {
+  if (value === null || value === undefined || value === '') return null;
+
+  const raw = String(value).trim();
+  if (!raw || raw === '-') return null;
+
+  const parsed = Number(raw.replace('%', '').replace(',', '.'));
+
+  if (!Number.isFinite(parsed)) {
+    return {
+      text: raw,
+      value: null
+    };
   }
-  const record = {
-    name,
-    relativePath,
-    nameKey: normalize(fileBase(name)),
-    pathKey,
-    url,
-    objectUrl: url.startsWith('blob:')
+
+  const percent = raw.includes('%') || parsed > 1 ? parsed : parsed * 100;
+
+  const formatted = Number.isInteger(percent)
+    ? String(percent)
+    : percent.toFixed(1).replace('.', ',');
+
+  return {
+    text: `${formatted}%`,
+    value: percent
   };
-  photoRecords.push(record);
-  photosByPath.set(pathKey, record);
-  loadedFolders.add(photoFolderName(relativePath));
 }
-function updatePhotoStatus() {
-  if (!photoStatus) return;
-  if (!photoRecords.length) {
-    photoStatus.textContent = `Buscando fotos em ${ROOT_PHOTOS_DIR}/ ou selecione uma pasta`;
-    return;
-  }
-  photoStatus.textContent = `${photoRecords.length} foto(s) encontrada(s) em ${loadedFolders.size} pasta(s)`;
+
+function studentHasGradeBelowSeven(student) {
+  const grades = student.notas || [];
+
+  return grades.some(item => {
+    const grade = parseGrade(item.nota);
+    return grade !== null && grade < 7;
+  });
 }
-function photoFolderName(path) {
-  const parts = String(path || '').split(/[\\/]+/).filter(Boolean);
-  return parts.length > 1 ? parts[parts.length - 2] : 'fotos';
+
+function showLoading(status) {
+  if (!loadingOverlay) return;
+  loadingOverlay.style.display = status ? 'flex' : 'none';
 }
-function pathHasTurma(pathKey, turma) {
-  return pathKey.split('/').includes(normalize(turma));
+
+function setApiStatus(message) {
+  if (apiStatus) apiStatus.textContent = message;
 }
-function normalizedWords(text) {
-  return normalize(text).split(' ').filter(Boolean);
+
+function normalizeStudentFromApi(student, index) {
+  const turma = student.turma || student.sala || student.serie || '';
+  const nome = student.nome || student.nomeAluno || student.aluno || '';
+
+  return {
+    id: student.id || `${turma}-${index + 1}`,
+    nome,
+    turma,
+    serie: student.serie || turma,
+    tutor: student.tutor || student.professor || '',
+    frequencia: student.frequencia || student.frequency || '',
+    notas: Array.isArray(student.notas) ? student.notas : [],
+    foto: student.foto || null
+  };
 }
-function wordsNearlyEqual(a, b) {
-  if (a === b) return true;
-  if (Math.min(a.length, b.length) < 5 || Math.abs(a.length - b.length) > 1) return false;
-  let edits = 0;
-  let i = 0;
-  let j = 0;
-  while (i < a.length && j < b.length) {
-    if (a[i] === b[j]) {
-      i++;
-      j++;
-    } else {
-      edits++;
-      if (edits > 1) return false;
-      if (a.length > b.length) i++;
-      else if (b.length > a.length) j++;
-      else {
-        i++;
-        j++;
+
+async function loadDataFromApi() {
+  showLoading(true);
+  setApiStatus('Carregando dados do Google Planilhas e Drive...');
+
+  try {
+    const response = await fetch(`${API_URL}?action=students&cache=${Date.now()}`);
+
+    if (!response.ok) {
+      throw new Error(`Erro HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Erro ao carregar dados da API.');
+    }
+
+    students = (data.students || [])
+      .map(normalizeStudentFromApi)
+      .filter(student => student.nome && student.turma)
+      .filter(studentHasGradeBelowSeven);
+
+    filtered = [...students];
+    currentIndex = 0;
+    gradesByStudent = new Map();
+    frequencyByStudent = new Map();
+
+    students.forEach(student => {
+      const key = studentKey(student.nome, student.turma);
+
+      const grades = (student.notas || [])
+        .map(item => {
+          const rawGrade = item.nota;
+          const nota = parseGrade(rawGrade);
+          const missing = rawGrade === null || rawGrade === undefined || rawGrade === '';
+
+          return {
+            disciplina: item.disciplina || item.materia || item.nome || '',
+            nota,
+            missing
+          };
+        })
+        .filter(item => item.disciplina)
+        .filter(item => item.nota !== null && item.nota < 7);
+
+      if (grades.length) {
+        gradesByStudent.set(key, grades);
       }
-    }
+
+      const frequency = parseFrequency(student.frequencia);
+      if (frequency) {
+        frequencyByStudent.set(key, frequency);
+      }
+    });
+
+    populateTurmas();
+    applyFilters();
+
+    setApiStatus(`${students.length} estudante(s) com nota abaixo de 7 carregado(s)`);
+  } catch (error) {
+    console.error(error);
+
+    students = [];
+    filtered = [];
+
+    populateTurmas();
+    renderList();
+    showStudent(0);
+
+    setApiStatus(`Erro: ${error.message}`);
+  } finally {
+    showLoading(false);
   }
-  return edits + (a.length - i) + (b.length - j) <= 1;
 }
-function similarity(a, b) {
-  const aw = normalizedWords(a);
-  const bw = normalizedWords(b);
-  if (!aw.length || !bw.length) return 0;
-  const used = new Set();
-  let inter = 0;
-  for (const word of bw) {
-    const index = aw.findIndex((candidate, i) => !used.has(i) && wordsNearlyEqual(candidate, word));
-    if (index >= 0) {
-      used.add(index);
-      inter++;
-    }
-  }
-  const coverage = inter / Math.max(aw.length, bw.length);
-  const containment = inter / Math.min(aw.length, bw.length);
-  return containment === 1 && Math.min(aw.length, bw.length) >= 2 ? containment : coverage;
-}
+
 function populateTurmas() {
-  const turmas = [...new Set(students.map(s => s.turma))];
-  turmaSelect.innerHTML = '<option value="">Todas as turmas</option>' + turmas.map(t => `<option value="${t}">${t}</option>`).join('');
+  const turmas = [...new Set(students.map(student => student.turma).filter(Boolean))]
+    .sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+
+  turmaSelect.innerHTML = '<option value="">Todas as turmas</option>' + turmas
+    .map(turma => `<option value="${escapeHtml(turma)}">${escapeHtml(turma)}</option>`)
+    .join('');
 }
+
 function applyFilters() {
   const turma = turmaSelect.value;
   const q = normalize(searchInput.value);
-  filtered = students.filter(s => (!turma || s.turma === turma) && (!q || normalize(s.nome).includes(q)));
+
+  filtered = students.filter(student => {
+    const turmaOk = !turma || student.turma === turma;
+    const searchOk = !q || normalize(student.nome).includes(q);
+    return turmaOk && searchOk;
+  });
+
   currentIndex = Math.min(currentIndex, Math.max(filtered.length - 1, 0));
+
   renderList();
   showStudent(currentIndex);
 }
+
 function renderList() {
   countInfo.textContent = `${filtered.length} aluno(s)`;
-  studentList.innerHTML = filtered.map((s, i) => `
-    <button class="studentItem ${i === currentIndex ? 'active' : ''}" data-index="${i}">
-      ${escapeHtml(s.nome)}<small>${escapeHtml(s.serie)} • Turma ${escapeHtml(s.turma)}</small>${s.tutor ? `<small>Tutor(a): ${escapeHtml(s.tutor)}</small>` : ''}
+
+  studentList.innerHTML = filtered.map((student, index) => `
+    <button class="studentItem ${index === currentIndex ? 'active' : ''}" data-index="${index}">
+      ${escapeHtml(student.nome)}
+      <small>${escapeHtml(student.serie)} • Turma ${escapeHtml(student.turma)}</small>
+      ${student.tutor ? `<small>Tutor(a): ${escapeHtml(student.tutor)}</small>` : ''}
     </button>
   `).join('');
-  document.querySelectorAll('.studentItem').forEach(btn => btn.onclick = () => showStudent(Number(btn.dataset.index)));
-}
-function findHeaderRow(rows) {
-  return rows.findIndex(row => normalize(cellValue(row, 0)).includes('NOME ALUNO'));
-}
-function isFrequencyLabel(value) {
-  const label = normalize(value);
-  return label.includes('FREQUENCIA') || label.includes('FREQUENCY');
-}
-function findFrequencyColumn(rows, headerIndex) {
-  const rowsToScan = rows.slice(Math.max(0, headerIndex - 2), headerIndex + 1);
-  let lastIndex = -1;
-  for (const row of rowsToScan) {
-    if (!Array.isArray(row)) continue;
-    row.forEach((value, index) => {
-      if (isFrequencyLabel(value)) lastIndex = index;
-    });
-  }
-  return lastIndex;
-}
-function gradesFromRow(row, disciplineColumns) {
-  return disciplineColumns
-    .map(({ discipline, index }) => {
-      const rawGrade = cellValue(row, index);
-      const nota = parseGrade(rawGrade);
-      const missing = rawGrade === null || rawGrade === undefined || rawGrade === '';
-      return { disciplina: discipline, nota, missing };
-    })
-    .filter(item => item.disciplina && (item.missing || (item.nota !== null && item.nota >= 0 && item.nota <= 6)));
-}
-function loadGradesWorkbook(workbook) {
-  if (!workbook || !Array.isArray(workbook.SheetNames)) {
-    throw new Error('arquivo sem abas reconhecidas');
-  }
-  const nextGrades = new Map();
-  const nextFrequency = new Map();
-  let totalStudents = 0;
-  for (const sheetName of workbook.SheetNames) {
-    const sheet = workbook.Sheets[sheetName];
-    if (!sheet) continue;
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
-    if (!Array.isArray(rows) || !rows.length) continue;
-    const headerIndex = findHeaderRow(rows);
-    if (headerIndex < 0) continue;
-    const turma = sheetName.trim();
-    const header = rows[headerIndex];
-    const frequencyIndex = findFrequencyColumn(rows, headerIndex);
-    const disciplineColumns = (Array.isArray(header) ? header : [])
-      .map((value, index) => ({ discipline: String(value || '').trim(), index }))
-      .filter(({ discipline, index }) => index >= 2 && index !== frequencyIndex && !isFrequencyLabel(discipline));
 
-    for (const row of rows.slice(headerIndex + 1)) {
-      const name = String(cellValue(row, 0) || '').trim();
-      if (!name || normalize(name).includes('NOME ALUNO')) continue;
-      const key = studentKey(name, turma);
-      const tutor = String(cellValue(row, 1) || '').trim();
-      if (tutor && studentsByKey.has(key)) {
-        studentsByKey.get(key).tutor = tutor;
-      }
-      const grades = gradesFromRow(row, disciplineColumns);
-      nextGrades.set(key, grades);
-      const frequency = frequencyIndex >= 0 ? parseFrequency(cellValue(row, frequencyIndex)) : null;
-      if (frequency) nextFrequency.set(key, frequency);
-      totalStudents++;
-    }
-  }
-  if (!totalStudents) {
-    throw new Error('nenhum aluno encontrado nas abas da planilha');
-  }
-  gradesByStudent = nextGrades;
-  frequencyByStudent = nextFrequency;
-  gradesStatus.textContent = `${totalStudents} aluno(s) com notas/frequencia carregadas`;
-  showStudent(currentIndex);
+  document.querySelectorAll('.studentItem').forEach(button => {
+    button.onclick = () => showStudent(Number(button.dataset.index));
+  });
 }
+
 function renderFrequency(student) {
   if (!studentFrequency) return;
+
   const frequency = frequencyByStudent.get(studentKey(student.nome, student.turma));
+
   studentFrequency.classList.remove('danger', 'warning', 'success');
-  studentFrequency.textContent = frequency ? `Frequencia: ${frequency.text}` : '';
-  if (frequency?.value !== null && frequency?.value !== undefined) {
-    studentFrequency.classList.add(frequency.value < 80 ? 'danger' : (frequency.value <= 90 ? 'warning' : 'success'));
+
+  if (!frequency) {
+    studentFrequency.textContent = '';
+    studentFrequency.style.display = 'none';
+    return;
   }
-  studentFrequency.style.display = frequency ? 'inline-flex' : 'none';
+
+  studentFrequency.textContent = `Frequência: ${frequency.text}`;
+  studentFrequency.style.display = 'inline-flex';
+
+  if (frequency.value !== null && frequency.value !== undefined) {
+    if (frequency.value < 80) {
+      studentFrequency.classList.add('danger');
+    } else if (frequency.value <= 89) {
+      studentFrequency.classList.add('warning');
+    } else {
+      studentFrequency.classList.add('success');
+    }
+  }
 }
+
 function renderGrades(student) {
   if (!gradesPanel) return;
+
   const grades = gradesByStudent.get(studentKey(student.nome, student.turma)) || [];
+
   gradesPanel.classList.remove('compact', 'veryCompact');
   studentInfo?.classList.remove('hasGrades', 'hasManyGrades', 'hasVeryManyGrades');
+
   if (!grades.length) {
     gradesPanel.innerHTML = '';
     return;
   }
+
   const longestDisciplineName = Math.max(...grades.map(({ disciplina }) => String(disciplina || '').length));
   const shouldCompact = grades.length >= 8 || longestDisciplineName >= 24;
   const shouldVeryCompact = grades.length >= 13 || longestDisciplineName >= 36;
+
   gradesPanel.classList.toggle('compact', shouldCompact);
   gradesPanel.classList.toggle('veryCompact', shouldVeryCompact);
+
   studentInfo?.classList.add('hasGrades');
   studentInfo?.classList.toggle('hasManyGrades', shouldCompact);
   studentInfo?.classList.toggle('hasVeryManyGrades', shouldVeryCompact);
+
   gradesPanel.innerHTML = grades.map(({ disciplina, nota, missing }) => `
-    <div class="gradeBadge ${missing ? 'missing' : (nota <= 4 ? 'danger' : 'warning')}">
+    <div class="gradeBadge ${missing ? 'missing' : nota <= 4 ? 'danger' : 'warning'}">
       <strong>${escapeHtml(disciplina)}</strong>
       <span>${escapeHtml(formatGrade(missing ? null : nota))}</span>
     </div>
   `).join('');
 }
-function studentPhotoCandidates(student) {
-  const expected = hasReviewTag(student.fotoArquivo) ? student.nome : (student.fotoArquivo || student.nome);
-  const expectedPathSource = hasReviewTag(student.fotoCaminhoRar) ? `${student.turma}/${student.nome}` : (student.fotoCaminhoRar || `${student.turma}/${expected}`);
-  const expectedPath = normalizePath(expectedPathSource);
-  const expectedName = normalize(fileBase(expected));
-  const matchingNameCount = photoRecords.filter(record => record.nameKey === expectedName).length;
-  const candidates = [];
 
-  for (const [path, record] of photosByPath.entries()) {
-    if (pathHasTurma(record.pathKey, student.turma) && (path === expectedPath || path.endsWith(`/${expectedPath}`))) {
-      candidates.push({ record, score: 3 });
-    }
-  }
-
-  for (const record of photoRecords) {
-    if (record.nameKey === expectedName && pathHasTurma(record.pathKey, student.turma)) {
-      candidates.push({ record, score: 2.5 });
-    } else if (record.nameKey === expectedName && matchingNameCount === 1 && pathHasTurma(record.pathKey, student.turma)) {
-      candidates.push({ record, score: 2 });
-    } else if (pathHasTurma(record.pathKey, student.turma)) {
-      const score = Math.max(similarity(student.nome, record.nameKey), similarity(expectedName, record.nameKey));
-      if (score >= 0.78) candidates.push({ record, score });
-    }
-  }
-
-  return candidates.sort((a, b) => b.score - a.score).map(candidate => candidate.record);
-}
-function assignPhotos() {
-  const usedPhotos = new Set();
-  photoAssignments = new Map();
-  for (const student of students) {
-    const record = studentPhotoCandidates(student).find(candidate => !usedPhotos.has(candidate.url));
-    if (!record) continue;
-    photoAssignments.set(student.id, record);
-    usedPhotos.add(record.url);
-  }
-}
-function findPhoto(student) {
-  return photoAssignments.get(student.id) || null;
-}
-function rootPhotoCandidates(student) {
-  const candidates = new Set();
-  const expected = hasReviewTag(student.fotoArquivo) ? '' : (student.fotoArquivo || '');
-
-  if (expected) {
-    candidates.add(`${ROOT_PHOTOS_DIR}/${student.turma}/${expected}`);
-
-    if (student.fotoCaminhoRar && !hasReviewTag(student.fotoCaminhoRar) && pathHasTurma(normalizePath(student.fotoCaminhoRar), student.turma)) {
-      const parts = String(student.fotoCaminhoRar).split(/[\\/]+/).filter(Boolean);
-      candidates.add(`${ROOT_PHOTOS_DIR}/${parts.join('/')}`);
-    }
-  } else {
-    for (const extension of IMAGE_EXTENSIONS) {
-      candidates.add(`${ROOT_PHOTOS_DIR}/${student.turma}/${student.nome}.${extension}`);
-    }
-  }
-
-  return [...candidates].map(path => ({
-    name: path.split('/').pop(),
-    relativePath: path,
-    url: encodeRelativePath(path)
-  }));
-}
-function imageExists(url) {
-  return new Promise(resolve => {
-    const image = new Image();
-    image.onload = () => resolve(true);
-    image.onerror = () => resolve(false);
-    image.src = url;
-  });
-}
-async function loadRootPhotos() {
-  updatePhotoStatus();
-  const seen = new Set();
-  for (const student of students) {
-    for (const candidate of rootPhotoCandidates(student)) {
-      if (seen.has(candidate.url)) continue;
-      seen.add(candidate.url);
-      if (await imageExists(candidate.url)) {
-        registerPhoto(candidate.name, candidate.relativePath, candidate.url);
-      }
-    }
-  }
-  assignPhotos();
-  updatePhotoStatus();
-  showStudent(currentIndex);
-}
 function showStudent(index) {
   if (!filtered.length) {
     studentName.textContent = 'Nenhum aluno encontrado';
     studentClass.textContent = '';
     studentTutor.textContent = '';
-    renderFrequency({ nome: '', turma: '' });
     serieBadge.textContent = '';
-    photoFrame.style.display = 'none';
-    studentPhoto.style.display = 'none';
-    noPhoto.style.display = 'none';
     matchInfo.textContent = '';
-    renderGrades({ nome: '', turma: '' });
-    return;
-  }
-  currentIndex = (index + filtered.length) % filtered.length;
-  const s = filtered[currentIndex];
-  serieBadge.textContent = s.serie;
-  studentName.textContent = s.nome;
-  studentClass.textContent = `Turma ${s.turma}`;
-  studentTutor.textContent = s.tutor ? `Tutor(a): ${s.tutor}` : '';
-  renderFrequency(s);
-  const photoRecord = findPhoto(s);
-  if (photoRecord) {
-    photoFrame.style.display = 'flex';
-    studentPhoto.src = photoRecord.url;
-    studentPhoto.style.display = 'block';
-    noPhoto.style.display = 'none';
-    matchInfo.textContent = `Foto associada: ${photoRecord.relativePath} • confiança ${Math.round((s.fotoScore || 0) * 100)}%`;
-  } else {
+
     photoFrame.style.display = 'none';
     studentPhoto.removeAttribute('src');
     studentPhoto.style.display = 'none';
     noPhoto.style.display = 'none';
-    matchInfo.textContent = '';
-  }
-  renderGrades(s);
-  renderList();
-}
-document.getElementById('photoInput').addEventListener('change', (event) => {
-  for (const file of event.target.files) {
-    if (!file.type.startsWith('image/')) continue;
-    const relativePath = file.webkitRelativePath || file.name;
-    registerPhoto(file.name, relativePath, URL.createObjectURL(file));
-  }
-  event.target.value = '';
-  assignPhotos();
-  updatePhotoStatus();
-  showStudent(currentIndex);
-});
-gradesInput.addEventListener('change', async (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
-  if (!window.XLSX || !XLSX.read || !XLSX.utils?.sheet_to_json) {
-    gradesStatus.textContent = 'Leitor de planilha não carregado';
-    event.target.value = '';
+
+    renderFrequency({ nome: '', turma: '' });
+    renderGrades({ nome: '', turma: '' });
     return;
   }
-  gradesStatus.textContent = 'Carregando notas...';
-  try {
-    const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data, { type: 'array', cellDates: false });
-    loadGradesWorkbook(workbook);
-  } catch (error) {
-    console.error(error);
-    gradesStatus.textContent = `Erro ao ler: ${error.message || 'planilha inválida'}`;
-  } finally {
-    event.target.value = '';
+
+  currentIndex = (index + filtered.length) % filtered.length;
+  const student = filtered[currentIndex];
+
+  serieBadge.textContent = student.serie;
+  studentName.textContent = student.nome;
+  studentClass.textContent = `Turma ${student.turma}`;
+  studentTutor.textContent = student.tutor ? `Tutor(a): ${student.tutor}` : '';
+
+  renderFrequency(student);
+
+  if (student.foto && student.foto.url) {
+    photoFrame.style.display = 'flex';
+    studentPhoto.src = student.foto.url;
+    studentPhoto.style.display = 'block';
+    noPhoto.style.display = 'none';
+    matchInfo.textContent = `Foto: ${student.foto.nomeArquivo || 'Google Drive'}`;
+  } else {
+    photoFrame.style.display = 'flex';
+    studentPhoto.removeAttribute('src');
+    studentPhoto.style.display = 'none';
+    noPhoto.style.display = 'block';
+    matchInfo.textContent = 'Foto não encontrada no Drive';
   }
-});
-document.getElementById('btnNext').onclick = () => showStudent(currentIndex + 1);
-document.getElementById('btnPrev').onclick = () => showStudent(currentIndex - 1);
-document.getElementById('btnRandom').onclick = () => showStudent(Math.floor(Math.random() * filtered.length));
+
+  renderGrades(student);
+  renderList();
+}
+
+function nextStudent() {
+  if (!filtered.length) return;
+  showStudent(currentIndex + 1);
+}
+
+function previousStudent() {
+  if (!filtered.length) return;
+  showStudent(currentIndex - 1);
+}
+
+function randomStudent() {
+  if (!filtered.length) return;
+  showStudent(Math.floor(Math.random() * filtered.length));
+}
+
+document.getElementById('btnNext').onclick = nextStudent;
+document.getElementById('btnPrev').onclick = previousStudent;
+document.getElementById('btnRandom').onclick = randomStudent;
 document.getElementById('btnFullscreen').onclick = () => presentation.requestFullscreen?.();
+
+btnReloadApi.onclick = loadDataFromApi;
 turmaSelect.onchange = applyFilters;
 searchInput.oninput = applyFilters;
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowRight') showStudent(currentIndex + 1);
-  if (e.key === 'ArrowLeft') showStudent(currentIndex - 1);
-  if (e.key.toLowerCase() === 'f') presentation.requestFullscreen?.();
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'ArrowRight') nextStudent();
+  if (event.key === 'ArrowLeft') previousStudent();
+  if (event.key.toLowerCase() === 'f') presentation.requestFullscreen?.();
 });
-populateTurmas();
-updatePhotoStatus();
-assignPhotos();
-applyFilters();
-loadRootPhotos();
+
+loadDataFromApi();

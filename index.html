@@ -7,16 +7,21 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div id="loadingOverlay" class="loadingOverlay">
+    <div class="loader"></div>
+    <p>Carregando estudantes...</p>
+  </div>
+
   <header class="topbar">
     <div>
       <h1>Apresentação de Estudantes</h1>
-      <p>Exiba nome, série, turma e foto dos estudantes.</p>
+      <p>Dados carregados do Google Planilhas e fotos do Google Drive.</p>
     </div>
     <div class="actions">
-      <button id="btnFullscreen">Tela cheia</button>
-      <button id="btnRandom">Aleatório</button>
-      <button id="btnPrev">◀ Anterior</button>
-      <button id="btnNext">Próximo ▶</button>
+      <button id="btnFullscreen" type="button">Tela cheia</button>
+      <button id="btnRandom" type="button">Aleatório</button>
+      <button id="btnPrev" type="button">◀ Anterior</button>
+      <button id="btnNext" type="button">Próximo ▶</button>
     </div>
   </header>
 
@@ -25,20 +30,16 @@
       Turma
       <select id="turmaSelect"></select>
     </label>
+
     <label>
       Buscar aluno
       <input id="searchInput" type="text" placeholder="Digite o nome..." />
     </label>
-    <label class="fileLabel">
-      Carregar fotos extras
-      <input id="photoInput" type="file" accept="image/*" multiple webkitdirectory directory />
-      <span id="photoStatus">Buscando fotos em alunos/ ou selecione uma pasta</span>
-    </label>
-    <label class="fileLabel">
-      Carregar planilha de notas
-      <input id="gradesInput" type="file" accept=".xlsx,.xls" />
-      <span id="gradesStatus">Nenhuma planilha carregada</span>
-    </label>
+
+    <div class="apiStatusBox">
+      <span id="apiStatus">Carregando dados do Google Planilhas e Drive...</span>
+      <button id="btnReloadApi" type="button">Atualizar dados</button>
+    </div>
   </section>
 
   <main class="stage">
@@ -55,6 +56,7 @@
         <img id="studentPhoto" alt="Foto do estudante" />
         <div id="noPhoto" class="noPhoto">Sem foto</div>
       </div>
+
       <div class="studentInfo">
         <span id="serieBadge" class="badge"></span>
         <h2 id="studentName"></h2>
@@ -71,8 +73,6 @@
     Dica: use as setas do teclado para avançar/voltar. Pressione F para tela cheia.
   </footer>
 
-  <script src="students.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -17,6 +17,7 @@ const gradesStatus = document.getElementById('gradesStatus');
 const gradesPanel = document.getElementById('gradesPanel');
 const presentation = document.getElementById('presentation');
 const studentInfo = document.querySelector('.studentInfo');
+const studentFrequency = document.getElementById('studentFrequency');
 const ROOT_PHOTOS_DIR = 'alunos';
 const IMAGE_EXTENSIONS = ['jpeg', 'jpg', 'png', 'webp'];
 let filtered = [...students];
@@ -26,6 +27,7 @@ let photosByPath = new Map();
 let loadedFolders = new Set();
 let photoAssignments = new Map();
 let gradesByStudent = new Map();
+let frequencyByStudent = new Map();
 
 function normalize(text) {
   return String(text || '')
@@ -60,6 +62,16 @@ function parseGrade(value) {
 function formatGrade(value) {
   if (value === null) return 'Sem nota';
   return Number.isInteger(value) ? String(value) : String(value).replace('.', ',');
+}
+function parseFrequency(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const parsed = Number(raw.replace('%', '').replace(',', '.'));
+  if (!Number.isFinite(parsed)) return { text: raw, value: null };
+  const percent = raw.includes('%') || parsed > 1 ? parsed : parsed * 100;
+  const formatted = Number.isInteger(percent) ? String(percent) : percent.toFixed(1).replace('.', ',');
+  return { text: `${formatted}%`, value: percent };
 }
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -175,10 +187,25 @@ function renderList() {
 function findHeaderRow(rows) {
   return rows.findIndex(row => normalize(cellValue(row, 0)).includes('NOME ALUNO'));
 }
-function gradesFromRow(row, disciplines) {
-  return disciplines
-    .map((discipline, index) => {
-      const rawGrade = cellValue(row, index + 2);
+function isFrequencyLabel(value) {
+  const label = normalize(value);
+  return label.includes('FREQUENCIA') || label.includes('FREQUENCY');
+}
+function findFrequencyColumn(rows, headerIndex) {
+  const rowsToScan = rows.slice(Math.max(0, headerIndex - 2), headerIndex + 1);
+  let lastIndex = -1;
+  for (const row of rowsToScan) {
+    if (!Array.isArray(row)) continue;
+    row.forEach((value, index) => {
+      if (isFrequencyLabel(value)) lastIndex = index;
+    });
+  }
+  return lastIndex;
+}
+function gradesFromRow(row, disciplineColumns) {
+  return disciplineColumns
+    .map(({ discipline, index }) => {
+      const rawGrade = cellValue(row, index);
       const nota = parseGrade(rawGrade);
       const missing = rawGrade === null || rawGrade === undefined || rawGrade === '';
       return { disciplina: discipline, nota, missing };
@@ -190,6 +217,7 @@ function loadGradesWorkbook(workbook) {
     throw new Error('arquivo sem abas reconhecidas');
   }
   const nextGrades = new Map();
+  const nextFrequency = new Map();
   let totalStudents = 0;
   for (const sheetName of workbook.SheetNames) {
     const sheet = workbook.Sheets[sheetName];
@@ -200,7 +228,10 @@ function loadGradesWorkbook(workbook) {
     if (headerIndex < 0) continue;
     const turma = sheetName.trim();
     const header = rows[headerIndex];
-    const disciplines = (Array.isArray(header) ? header : []).slice(2).map(value => String(value || '').trim());
+    const frequencyIndex = findFrequencyColumn(rows, headerIndex);
+    const disciplineColumns = (Array.isArray(header) ? header : [])
+      .map((value, index) => ({ discipline: String(value || '').trim(), index }))
+      .filter(({ discipline, index }) => index >= 2 && index !== frequencyIndex && !isFrequencyLabel(discipline));
 
     for (const row of rows.slice(headerIndex + 1)) {
       const name = String(cellValue(row, 0) || '').trim();
@@ -210,8 +241,10 @@ function loadGradesWorkbook(workbook) {
       if (tutor && studentsByKey.has(key)) {
         studentsByKey.get(key).tutor = tutor;
       }
-      const grades = gradesFromRow(row, disciplines);
+      const grades = gradesFromRow(row, disciplineColumns);
       nextGrades.set(key, grades);
+      const frequency = frequencyIndex >= 0 ? parseFrequency(cellValue(row, frequencyIndex)) : null;
+      if (frequency) nextFrequency.set(key, frequency);
       totalStudents++;
     }
   }
@@ -219,8 +252,19 @@ function loadGradesWorkbook(workbook) {
     throw new Error('nenhum aluno encontrado nas abas da planilha');
   }
   gradesByStudent = nextGrades;
-  gradesStatus.textContent = `${totalStudents} aluno(s) com notas carregadas`;
+  frequencyByStudent = nextFrequency;
+  gradesStatus.textContent = `${totalStudents} aluno(s) com notas/frequencia carregadas`;
   showStudent(currentIndex);
+}
+function renderFrequency(student) {
+  if (!studentFrequency) return;
+  const frequency = frequencyByStudent.get(studentKey(student.nome, student.turma));
+  studentFrequency.classList.remove('danger', 'warning', 'success');
+  studentFrequency.textContent = frequency ? `Frequencia: ${frequency.text}` : '';
+  if (frequency?.value !== null && frequency?.value !== undefined) {
+    studentFrequency.classList.add(frequency.value < 80 ? 'danger' : (frequency.value <= 90 ? 'warning' : 'success'));
+  }
+  studentFrequency.style.display = frequency ? 'inline-flex' : 'none';
 }
 function renderGrades(student) {
   if (!gradesPanel) return;
@@ -338,6 +382,7 @@ function showStudent(index) {
     studentName.textContent = 'Nenhum aluno encontrado';
     studentClass.textContent = '';
     studentTutor.textContent = '';
+    renderFrequency({ nome: '', turma: '' });
     serieBadge.textContent = '';
     photoFrame.style.display = 'none';
     studentPhoto.style.display = 'none';
@@ -352,6 +397,7 @@ function showStudent(index) {
   studentName.textContent = s.nome;
   studentClass.textContent = `Turma ${s.turma}`;
   studentTutor.textContent = s.tutor ? `Tutor(a): ${s.tutor}` : '';
+  renderFrequency(s);
   const photoRecord = findPhoto(s);
   if (photoRecord) {
     photoFrame.style.display = 'flex';

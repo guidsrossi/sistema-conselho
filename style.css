@@ -43,25 +43,30 @@ button:hover { transform: translateY(-1px); }
 .studentInfo h2 { font-size: clamp(38px, 5vw, 78px); line-height:1.02; margin:24px 0 16px; }
 .studentInfo p { font-size: clamp(24px, 2.8vw, 42px); color:#dbeafe; margin:0; font-weight:800; }
 .studentInfo .studentTutor { margin-top:10px; color:#fef9c3; font-size: clamp(20px, 2vw, 34px); }
+.studentInfo .studentFrequency { display:none; width:max-content; max-width:100%; margin-top:12px; padding:8px 13px; border-radius:8px; background:#dcfce7; color:#14532d; font-size: clamp(16px, 1.55vw, 26px); font-weight:900; box-shadow:0 10px 26px rgba(0,0,0,.16); }
+.studentInfo .studentFrequency.danger { background:#fee2e2; color:#7f1d1d; }
+.studentInfo .studentFrequency.warning { background:#fef3c7; color:#78350f; }
+.studentInfo .studentFrequency.success { background:#dcfce7; color:#14532d; }
 .studentInfo small { display:block; margin-top:22px; color:var(--muted); font-size:14px; }
 .studentInfo { min-width:0; width:100%; }
 .studentInfo.hasManyGrades h2 { font-size: clamp(34px, 4vw, 62px); margin-bottom:12px; }
 .studentInfo.hasVeryManyGrades h2 { font-size: clamp(30px, 3.5vw, 54px); margin:18px 0 10px; }
 .studentInfo.hasManyGrades p { font-size: clamp(22px, 2.4vw, 34px); }
 .studentInfo.hasVeryManyGrades .studentTutor { font-size: clamp(18px, 1.8vw, 28px); }
+.studentInfo.hasVeryManyGrades .studentFrequency { font-size: clamp(15px, 1.35vw, 22px); padding:7px 11px; margin-top:8px; }
 .studentInfo.hasManyGrades small { margin-top:14px; }
 .gradesPanel { display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap:10px; margin-top:24px; max-width:820px; width:100%; }
 .gradesPanel.compact { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap:8px; margin-top:18px; }
 .gradesPanel.veryCompact { grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap:6px; margin-top:14px; }
-.gradeBadge { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; min-height:44px; padding:9px 12px 9px 14px; border-radius:8px; border-left:7px solid; color:#111827; font-weight:900; box-shadow:0 10px 26px rgba(0,0,0,.18); }
-.gradeBadge strong { min-width:0; font-size:15px; line-height:1.15; overflow-wrap:anywhere; word-break:normal; hyphens:auto; }
-.gradeBadge span { flex:0 0 auto; min-width:34px; height:28px; padding:0 8px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; background:#ffffff; color:#111827; font-size:16px; white-space:nowrap; }
+.gradeBadge { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; min-height:50px; padding:11px 14px 11px 16px; border-radius:8px; border-left:7px solid; color:#111827; font-weight:900; box-shadow:0 10px 26px rgba(0,0,0,.18); }
+.gradeBadge strong { min-width:0; font-size:18px; line-height:1.15; overflow-wrap:anywhere; word-break:normal; hyphens:auto; }
+.gradeBadge span { flex:0 0 auto; min-width:40px; height:32px; padding:0 9px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; background:#ffffff; color:#111827; font-size:19px; white-space:nowrap; }
 .gradesPanel.compact .gradeBadge { min-height:38px; gap:8px; padding:7px 10px 7px 11px; border-left-width:6px; }
-.gradesPanel.compact .gradeBadge strong { font-size:13px; }
-.gradesPanel.compact .gradeBadge span { height:25px; min-width:30px; font-size:14px; }
+.gradesPanel.compact .gradeBadge strong { font-size:15px; }
+.gradesPanel.compact .gradeBadge span { height:27px; min-width:32px; font-size:16px; }
 .gradesPanel.veryCompact .gradeBadge { min-height:32px; gap:6px; padding:5px 8px 5px 9px; border-left-width:5px; }
-.gradesPanel.veryCompact .gradeBadge strong { font-size:11px; line-height:1.08; }
-.gradesPanel.veryCompact .gradeBadge span { height:22px; min-width:28px; padding:0 6px; font-size:12px; }
+.gradesPanel.veryCompact .gradeBadge strong { font-size:13px; line-height:1.08; }
+.gradesPanel.veryCompact .gradeBadge span { height:24px; min-width:30px; padding:0 6px; font-size:14px; }
 .gradeBadge.danger { background:#fee2e2; border-color:#dc2626; }
 .gradeBadge.warning { background:#fef3c7; border-color:#f59e0b; }
 .gradeBadge.missing { background:#e5e7eb; border-color:#64748b; }
@@ -73,10 +78,12 @@ footer { padding:0 32px 22px; color:var(--muted); }
 .presentation:fullscreen .studentInfo h2 { font-size: clamp(54px, 6vw, 110px); }
 .presentation:fullscreen .studentInfo p { font-size: clamp(34px, 3vw, 58px); }
 .presentation:fullscreen .studentInfo .studentTutor { font-size: clamp(28px, 2.4vw, 46px); }
+.presentation:fullscreen .studentInfo .studentFrequency { font-size: clamp(22px, 1.9vw, 36px); }
 .presentation:fullscreen .studentInfo.hasManyGrades h2 { font-size: clamp(44px, 4.4vw, 78px); }
 .presentation:fullscreen .studentInfo.hasVeryManyGrades h2 { font-size: clamp(38px, 3.6vw, 64px); }
 .presentation:fullscreen .studentInfo.hasManyGrades p { font-size: clamp(28px, 2.4vw, 42px); }
 .presentation:fullscreen .studentInfo.hasVeryManyGrades .studentTutor { font-size: clamp(22px, 1.9vw, 34px); }
+.presentation:fullscreen .studentInfo.hasVeryManyGrades .studentFrequency { font-size: clamp(18px, 1.55vw, 28px); }
 .presentation:fullscreen .gradesPanel { max-width:980px; }
 .presentation:fullscreen .gradesPanel.compact { max-width:1040px; }
 .presentation:fullscreen .gradesPanel.veryCompact { max-width:1080px; }

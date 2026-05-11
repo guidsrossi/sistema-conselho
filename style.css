@@ -407,6 +407,25 @@ button:hover {
   border-color: #f59e0b;
 }
 
+.gradeBadge.success {
+  background: #dcfce7;
+  border-color: #22c55e;
+  color: #14532d;
+}
+
+.gradeBadge.congratulation {
+  grid-column: 1 / -1;
+  justify-content: center;
+  min-height: 76px;
+  padding: 18px 22px;
+  text-align: center;
+}
+
+.gradeBadge.congratulation strong {
+  font-size: clamp(20px, 2vw, 32px);
+  line-height: 1.2;
+}
+
 .gradeBadge.missing {
   background: #e5e7eb;
   border-color: #64748b;

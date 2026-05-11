@@ -100,6 +100,18 @@ function studentHasGradeBelowSeven(student) {
   });
 }
 
+function studentHasOnlyGradesAboveSeven(student) {
+  const grades = (student.notas || [])
+    .map(item => parseGrade(item.nota))
+    .filter(grade => grade !== null);
+
+  return grades.length > 0 && grades.every(grade => grade > 7);
+}
+
+function studentShouldAppear(student) {
+  return studentHasGradeBelowSeven(student) || studentHasOnlyGradesAboveSeven(student);
+}
+
 function showLoading(status) {
   if (!loadingOverlay) return;
   loadingOverlay.style.display = status ? 'flex' : 'none';
@@ -145,7 +157,7 @@ async function loadDataFromApi() {
     students = (data.students || [])
       .map(normalizeStudentFromApi)
       .filter(student => student.nome && student.turma)
-      .filter(studentHasGradeBelowSeven);
+      .filter(studentShouldAppear);
 
     filtered = [...students];
     currentIndex = 0;
@@ -183,7 +195,7 @@ async function loadDataFromApi() {
     populateTurmas();
     applyFilters();
 
-    setApiStatus(`${students.length} estudante(s) com nota abaixo de 7 carregado(s)`);
+    setApiStatus(`${students.length} estudante(s) carregado(s) para apresentaÃ§Ã£o`);
   } catch (error) {
     console.error(error);
 
@@ -277,7 +289,15 @@ function renderGrades(student) {
   studentInfo?.classList.remove('hasGrades', 'hasManyGrades', 'hasVeryManyGrades');
 
   if (!grades.length) {
-    gradesPanel.innerHTML = '';
+    if (studentHasOnlyGradesAboveSeven(student)) {
+      gradesPanel.innerHTML = `
+        <div class="gradeBadge success congratulation">
+          <strong>ParabÃ©ns, todas as suas notas estÃ£o acima do esperado</strong>
+        </div>
+      `;
+    } else {
+      gradesPanel.innerHTML = '';
+    }
     return;
   }
 

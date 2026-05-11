@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbx3DZ9kDhDmloLqQwCOV7SSsKxGrpF3uwntwRwHtTHldP8XN2FAPZwQKc1ftY28IqXA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyyhCd4Of8lucXdfvn5hnyKE5JI_OWhTbM8pbqnKQspsmPkGkDy6Az6VuBxcjFgHNt-/exec';
 
 const turmaSelect = document.getElementById('turmaSelect');
 const searchInput = document.getElementById('searchInput');
@@ -100,16 +100,12 @@ function studentHasGradeBelowSeven(student) {
   });
 }
 
-function studentHasOnlyGradesAboveSeven(student) {
+function studentHasOnlyGradesAboveOrEqualSeven(student) {
   const grades = (student.notas || [])
     .map(item => parseGrade(item.nota))
     .filter(grade => grade !== null);
 
-  return grades.length > 0 && grades.every(grade => grade > 7);
-}
-
-function studentShouldAppear(student) {
-  return studentHasGradeBelowSeven(student) || studentHasOnlyGradesAboveSeven(student);
+  return grades.length > 0 && grades.every(grade => grade >= 7);
 }
 
 function showLoading(status) {
@@ -154,10 +150,9 @@ async function loadDataFromApi() {
       throw new Error(data.error || 'Erro ao carregar dados da API.');
     }
 
-    students = (data.students || [])
-      .map(normalizeStudentFromApi)
-      .filter(student => student.nome && student.turma)
-      .filter(studentShouldAppear);
+students = (data.students || [])
+  .map(normalizeStudentFromApi)
+  .filter(student => student.nome && student.turma);
 
     filtered = [...students];
     currentIndex = 0;
@@ -289,10 +284,10 @@ function renderGrades(student) {
   studentInfo?.classList.remove('hasGrades', 'hasManyGrades', 'hasVeryManyGrades');
 
   if (!grades.length) {
-    if (studentHasOnlyGradesAboveSeven(student)) {
+    if (studentHasOnlyGradesAboveOrEqualSeven(student)) {
       gradesPanel.innerHTML = `
         <div class="gradeBadge success congratulation">
-          <strong>ParabÃ©ns, todas as suas notas estÃ£o acima do esperado</strong>
+          <strong>Parabéns, todas as suas notas estão acima do esperado</strong>
         </div>
       `;
     } else {

@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbyyhCd4Of8lucXdfvn5hnyKE5JI_OWhTbM8pbqnKQspsmPkGkDy6Az6VuBxcjFgHNt-/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzMXiEA49U0A7nS4SUDtKnLYZwef5tkUfk0VFJb4EI_gc34agdABH9cYnN5XTaySTsv/exec';
 
 const turmaSelect = document.getElementById('turmaSelect');
 const searchInput = document.getElementById('searchInput');

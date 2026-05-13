@@ -16,6 +16,7 @@ const matchInfo = document.getElementById('matchInfo');
 const gradesPanel = document.getElementById('gradesPanel');
 const presentation = document.getElementById('presentation');
 const studentInfo = document.querySelector('.studentInfo');
+const studentHeader = document.querySelector('.studentHeader');
 const apiStatus = document.getElementById('apiStatus');
 const btnReloadApi = document.getElementById('btnReloadApi');
 const loadingOverlay = document.getElementById('loadingOverlay');
@@ -282,6 +283,7 @@ function renderGrades(student) {
 
   gradesPanel.classList.remove('compact', 'veryCompact');
   studentInfo?.classList.remove('hasGrades', 'hasManyGrades', 'hasVeryManyGrades');
+  studentHeader?.classList.remove('hasGrades', 'hasManyGrades', 'hasVeryManyGrades');
 
   if (!grades.length) {
     if (studentHasOnlyGradesAboveOrEqualSeven(student)) {
@@ -306,6 +308,9 @@ function renderGrades(student) {
   studentInfo?.classList.add('hasGrades');
   studentInfo?.classList.toggle('hasManyGrades', shouldCompact);
   studentInfo?.classList.toggle('hasVeryManyGrades', shouldVeryCompact);
+  studentHeader?.classList.add('hasGrades');
+  studentHeader?.classList.toggle('hasManyGrades', shouldCompact);
+  studentHeader?.classList.toggle('hasVeryManyGrades', shouldVeryCompact);
 
   gradesPanel.innerHTML = grades.map(({ disciplina, nota, missing }) => `
     <div class="gradeBadge ${missing ? 'missing' : nota <= 4 ? 'danger' : 'warning'}">

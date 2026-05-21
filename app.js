@@ -19,6 +19,7 @@ const studentInfo = document.querySelector('.studentInfo');
 const studentHeader = document.querySelector('.studentHeader');
 const apiStatus = document.getElementById('apiStatus');
 const btnReloadApi = document.getElementById('btnReloadApi');
+const btnTheme = document.getElementById('btnTheme');
 const loadingOverlay = document.getElementById('loadingOverlay');
 
 let students = [];
@@ -26,6 +27,22 @@ let filtered = [];
 let currentIndex = 0;
 let gradesByStudent = new Map();
 let frequencyByStudent = new Map();
+
+function applyTheme(theme) {
+  const selectedTheme = theme === 'light' ? 'light' : 'dark';
+  document.body.dataset.theme = selectedTheme;
+  localStorage.setItem('studentPresentationTheme', selectedTheme);
+
+  if (btnTheme) {
+    const isLight = selectedTheme === 'light';
+    btnTheme.textContent = isLight ? 'Tema escuro' : 'Tema claro';
+    btnTheme.setAttribute('aria-pressed', String(isLight));
+  }
+}
+
+function toggleTheme() {
+  applyTheme(document.body.dataset.theme === 'light' ? 'dark' : 'light');
+}
 
 function normalize(text) {
   return String(text || '')
@@ -386,6 +403,7 @@ document.getElementById('btnPrev').onclick = previousStudent;
 document.getElementById('btnRandom').onclick = randomStudent;
 document.getElementById('btnFullscreen').onclick = () => presentation.requestFullscreen?.();
 
+btnTheme.onclick = toggleTheme;
 btnReloadApi.onclick = loadDataFromApi;
 turmaSelect.onchange = applyFilters;
 searchInput.oninput = applyFilters;
@@ -396,4 +414,5 @@ document.addEventListener('keydown', event => {
   if (event.key.toLowerCase() === 'f') presentation.requestFullscreen?.();
 });
 
+applyTheme(localStorage.getItem('studentPresentationTheme') || 'dark');
 loadDataFromApi();

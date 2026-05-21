@@ -7,8 +7,43 @@
   --muted: #cbd5e1;
   --accent: #38bdf8;
   --accent2: #22c55e;
+  --page-bg: radial-gradient(circle at top left, #1d4ed8 0, transparent 28%), linear-gradient(135deg, var(--bg1), var(--bg2));
+  --border: rgba(255,255,255,.16);
+  --panel-border: rgba(255,255,255,.18);
+  --field-bg: #ffffff;
+  --field-text: #0f172a;
+  --button-text: #06131f;
+  --item-bg: rgba(255,255,255,.08);
+  --item-text: #ffffff;
+  --info-text: #dbeafe;
+  --tutor-text: #fef9c3;
+  --no-photo-text: rgba(255,255,255,.72);
+  --shadow: 0 22px 70px rgba(0,0,0,.25);
   --page-pad: clamp(14px, 3vw, 32px);
   --radius-lg: clamp(18px, 2vw, 28px);
+}
+
+body[data-theme="light"] {
+  --bg1: #f8fbff;
+  --bg2: #dbeafe;
+  --card: rgba(255,255,255,.78);
+  --card2: rgba(255,255,255,.92);
+  --text: #0f172a;
+  --muted: #475569;
+  --accent: #0ea5e9;
+  --accent2: #16a34a;
+  --page-bg: linear-gradient(135deg, #f8fbff 0%, #e0f2fe 52%, #eef2ff 100%);
+  --border: rgba(15,23,42,.12);
+  --panel-border: rgba(15,23,42,.14);
+  --field-bg: #ffffff;
+  --field-text: #0f172a;
+  --button-text: #05243a;
+  --item-bg: rgba(255,255,255,.82);
+  --item-text: #0f172a;
+  --info-text: #1e3a8a;
+  --tutor-text: #854d0e;
+  --no-photo-text: rgba(15,23,42,.52);
+  --shadow: 0 18px 48px rgba(15,23,42,.12);
 }
 
 * {
@@ -20,7 +55,7 @@ body {
   min-height: 100vh;
   font-family: Arial, Helvetica, sans-serif;
   color: var(--text);
-  background: radial-gradient(circle at top left, #1d4ed8 0, transparent 28%), linear-gradient(135deg, var(--bg1), var(--bg2));
+  background: var(--page-bg);
   overflow-x: hidden;
 }
 
@@ -32,7 +67,25 @@ body {
   padding: 22px var(--page-pad);
 }
 
-.topbar > div:first-child {
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.brand img {
+  width: clamp(76px, 10vw, 132px);
+  aspect-ratio: 16/9;
+  object-fit: contain;
+  padding: 6px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 26px rgba(0,0,0,.12);
+}
+
+.brand > div {
   min-width: 0;
 }
 
@@ -75,7 +128,7 @@ input {
 
 button {
   cursor: pointer;
-  color: #06131f;
+  color: var(--button-text);
   font-weight: 700;
   background: linear-gradient(135deg, var(--accent), #93c5fd);
   min-height: 44px;
@@ -90,7 +143,7 @@ button:hover {
   margin: 0 var(--page-pad) 18px;
   padding: 16px;
   background: var(--card);
-  border: 1px solid rgba(255,255,255,.16);
+  border: 1px solid var(--border);
   border-radius: 18px;
   backdrop-filter: blur(8px);
 }
@@ -108,8 +161,8 @@ button:hover {
 .controls select {
   width: 100%;
   min-width: 0;
-  background: #fff;
-  color: #0f172a;
+  background: var(--field-bg);
+  color: var(--field-text);
 }
 
 .apiStatusBox {
@@ -127,8 +180,8 @@ button:hover {
   max-width: 560px;
   border-radius: 14px;
   padding: 12px 14px;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--field-bg);
+  color: var(--field-text);
   font-weight: 600;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -147,7 +200,7 @@ button:hover {
   min-height: 0;
   overflow: hidden;
   background: var(--card);
-  border: 1px solid rgba(255,255,255,.16);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
 
@@ -156,7 +209,7 @@ button:hover {
   justify-content: space-between;
   gap: 12px;
   padding: 16px;
-  background: rgba(255,255,255,.08);
+  background: var(--card2);
 }
 
 .listHeader span {
@@ -173,9 +226,9 @@ button:hover {
   width: 100%;
   text-align: left;
   margin-bottom: 8px;
-  background: rgba(255,255,255,.08);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,.08);
+  background: var(--item-bg);
+  color: var(--item-text);
+  border: 1px solid var(--border);
   white-space: normal;
   line-height: 1.25;
   overflow-wrap: anywhere;
@@ -205,9 +258,9 @@ button:hover {
   gap: clamp(16px, 2.2vw, 28px);
   padding: clamp(20px, 3vw, 38px);
   border-radius: var(--radius-lg);
-  background: rgba(255,255,255,.12);
-  border: 1px solid rgba(255,255,255,.18);
-  box-shadow: 0 22px 70px rgba(0,0,0,.25);
+  background: var(--card);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow);
   overflow: auto;
 }
 
@@ -228,8 +281,8 @@ button:hover {
   max-height: min(500px, calc(100vh - 330px));
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.04));
-  border: 1px solid rgba(255,255,255,.22);
+  background: linear-gradient(135deg, var(--card2), rgba(255,255,255,.04));
+  border: 1px solid var(--panel-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -246,7 +299,7 @@ button:hover {
 .noPhoto {
   font-size: clamp(24px, 4vw, 42px);
   font-weight: 800;
-  color: rgba(255,255,255,.72);
+  color: var(--no-photo-text);
   text-transform: uppercase;
   letter-spacing: 0;
   text-align: center;
@@ -280,7 +333,7 @@ button:hover {
 
 .studentInfo p {
   font-size: clamp(20px, 2.8vw, 42px);
-  color: #dbeafe;
+  color: var(--info-text);
   margin: 0;
   font-weight: 800;
   overflow-wrap: anywhere;
@@ -288,7 +341,7 @@ button:hover {
 
 .studentInfo .studentTutor {
   margin-top: 10px;
-  color: #fef9c3;
+  color: var(--tutor-text);
   font-size: clamp(20px, 2vw, 34px);
 }
 
@@ -542,7 +595,7 @@ footer {
   grid-template-rows: auto minmax(0, 1fr);
   border-radius: 0;
   padding: clamp(22px, 3vw, 42px);
-  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+  background: var(--page-bg);
 }
 
 .presentation:fullscreen .photoFrame {
@@ -609,6 +662,10 @@ footer {
     padding-top: 18px;
   }
 
+  .brand {
+    align-items: flex-start;
+  }
+
   .actions {
     justify-content: flex-start;
   }
@@ -657,6 +714,10 @@ footer {
 @media (max-width: 640px) {
   .topbar {
     gap: 14px;
+  }
+
+  .brand img {
+    width: 88px;
   }
 
   .topbar p,

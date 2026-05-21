@@ -24,7 +24,7 @@
     <div class="actions">
       <button id="btnTheme" type="button" aria-pressed="false">Tema claro</button>
       <button id="btnFullscreen" type="button">Tela cheia</button>
-      <button id="btnRandom" type="button">Aleatório</button>
+      <button style="display: none;" id="btnRandom" type="button">Aleatório</button>
       <button id="btnPrev" type="button">◀ Anterior</button>
       <button id="btnNext" type="button">Próximo ▶</button>
     </div>
@@ -58,7 +58,7 @@
 
     <section class="presentation" id="presentation">
       <div class="studentHeader">
-        <span id="serieBadge" class="badge"></span>
+        <span id="serieBadge" class="badge" style="display: none;"></span>
         <h2 id="studentName"></h2>
       </div>
 
@@ -71,14 +71,14 @@
         <p id="studentClass"></p>
         <p id="studentTutor" class="studentTutor"></p>
         <p id="studentFrequency" class="studentFrequency"></p>
-        <small id="matchInfo"></small>
+        <small style="display: none;" id="matchInfo"></small>
         <div id="gradesPanel" class="gradesPanel"></div>
       </div>
     </section>
   </main>
 
   <footer>
-    Dica: use as setas do teclado para avançar/voltar. Pressione F para tela cheia.
+    Dica: use as setas do teclado para avançar/voltar.
   </footer>
 
   <script src="app.js"></script>

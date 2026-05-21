@@ -208,7 +208,7 @@ students = (data.students || [])
     populateTurmas();
     applyFilters();
 
-    setApiStatus(`${students.length} estudante(s) carregado(s) para apresentaÃ§Ã£o`);
+    setApiStatus(`${students.length} estudante(s) carregado(s) para aprensentações.`);
   } catch (error) {
     console.error(error);
 
@@ -411,7 +411,6 @@ searchInput.oninput = applyFilters;
 document.addEventListener('keydown', event => {
   if (event.key === 'ArrowRight') nextStudent();
   if (event.key === 'ArrowLeft') previousStudent();
-  if (event.key.toLowerCase() === 'f') presentation.requestFullscreen?.();
 });
 
 applyTheme(localStorage.getItem('studentPresentationTheme') || 'dark');
